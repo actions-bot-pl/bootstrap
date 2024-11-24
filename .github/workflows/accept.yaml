@@ -1,0 +1,14 @@
+name: Accept Invitations
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+  
+jobs:
+  accept:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          github() { curl --no-progress-meter -H 'Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}' https://api.github.com"$@"; }
+          github /user/repository_invitations | jq '.[].id' | while read -r invite_id; do github /user/repository_invitations/"$invite_id"; done
