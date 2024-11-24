@@ -1,0 +1,30 @@
+name: Rotate Tokens
+
+on:
+  schedule:
+    - cron: '0 * * * 0'
+  workflow_dispatch:
+
+concurrency:
+  group: renovate
+
+jobs:
+  list-repositories:
+    runs-on: ubuntu-latest
+    outputs:
+      repositories: ${{ steps.dynamic.outputs.repositories }}
+    steps:
+      - run: |
+          github() { curl --no-progress-meter -H 'Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}' https://api.github.com"$@"; }
+          github /user/repos | jq -r '.[].full_name' | grep -E '^plengauer/automate$' | jq -nR '{"include": [inputs | select(length > 0) | {repository: .}]}' | tr -d '\n' | xargs -0 -I {} echo 'repositories={}' >> "$GITHUB_OUTPUT"
+        id: dynamic
+
+  rotate-token:
+    needs: list-repositories
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJSON(needs.list-repositories.outputs.repositories) }}
+    steps:
+      - run: |
+          github() { curl --no-progress-meter -H 'Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}' https://api.github.com"$@"; }
+          # TODO store new token (expiration based on schedule)
