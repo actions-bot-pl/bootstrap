@@ -1,0 +1,54 @@
+name: Onboard
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+  
+jobs:
+  list-repositories:
+    runs-on: ubuntu-latest
+    outputs:
+      repositories: ${{ steps.dynamic.outputs.repositories }}
+    steps:
+      - run: |
+          github() { curl --no-progress-meter -H 'Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}' https://api.github.com"$@"; }
+          github /user/repos | jq -r '.[].full_name' | grep -E '^plengauer/automate$' | jq -nR '{"include": [inputs | select(length > 0) | {repository: .}]}' | tr -d '\n' | xargs -0 -I {} echo 'repositories={}' >> "$GITHUB_OUTPUT"
+        id: dynamic
+
+  onboard-repository:
+    needs: list-repositories
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJSON(needs.list-repositories.outputs.repositories) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          path: ./self
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          path: ./other
+          repository: ${{ matrix.repository }}
+      - run: |
+          cd ./other/github/workflows
+          echo ./self/automations/*/ | while read -r folder; do
+            sh -e "$folder"/test.sh || cp "$folder"/*.yaml .
+          done
+      - uses: peter-evans/create-pull-request@v7
+        id: open-pr
+        with:
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          path: ./other
+          commit-message: "Onboard automations"
+          branch: "automate-onboard"
+          title: "Onboard automations"
+          delete-branch: true
+      - uses: peter-evans/enable-pull-request-automerge@v3
+        if: steps.open-pr.outputs.pull-request-number != null
+        with:
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          repository: ${{ matrix.repository }}
+          pull-request-number: ${{ steps.open-pr.outputs.pull-request-number }}
+          merge-method: squash
