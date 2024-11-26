@@ -33,7 +33,7 @@ jobs:
           repository: ${{ matrix.repository }}
       - run: |
           cd ./other/.github/workflows
-          echo ./self/automations/*/ | while read -r folder; do
+          echo ./self/automations/* | while read -r folder; do
             sh -e "$folder"/test.sh || cp "$folder"/*.yaml .
           done
       - uses: peter-evans/create-pull-request@v7
