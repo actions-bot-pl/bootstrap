@@ -32,7 +32,7 @@ jobs:
           path: ./other
           repository: ${{ matrix.repository }}
       - run: |
-          echo ./self/automations/* | while read -r folder; do
+          echo "$(pwd)"/self/automations/* | while read -r folder; do
             cd ./other/.github/workflows
             sh -e "$folder"/test.sh || cp "$folder"/*.yaml .
           done
