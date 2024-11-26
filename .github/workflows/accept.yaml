@@ -11,4 +11,4 @@ jobs:
     steps:
       - run: |
           github() { curl -v --no-progress-meter -H 'Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}' https://api.github.com"$@"; }
-          github /user/repository_invitations | jq '.[].id' | while read -r invite_id; do github /user/repository_invitations/"$invite_id"; done
+          github /user/repository_invitations | jq '.[].id' | while read -r invite_id; do github /user/repository_invitations/"$invite_id" -X PATCH; done
