@@ -16,7 +16,7 @@ jobs:
           github /user/repos | jq -r '.[].full_name' | grep -E '^plengauer/automate$' | jq -nR '{"include": [inputs | select(length > 0) | {repository: .}]}' | tr -d '\n' | xargs -0 -I {} echo 'repositories={}' >> "$GITHUB_OUTPUT"
         id: dynamic
 
-  onboard-repository:
+  onboard:
     needs: list-repositories
     runs-on: ubuntu-latest
     strategy:
