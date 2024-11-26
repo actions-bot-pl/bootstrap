@@ -32,6 +32,7 @@ jobs:
           path: ./other
           repository: ${{ matrix.repository }}
       - run: |
+          set -x
           find "$(pwd)"/self/automations/* | grep -vE '/$' | while read -r file; do
             new_file=./other/"${file#*/self/automations/*/}"
             [ -f "$new_file" ] || [ -f "${new_file//yaml$/yml}" ] || (mkdir -p "${new_file%/*}" && cp "$file" "$new_file")
