@@ -32,7 +32,6 @@ jobs:
           path: ./other
           repository: ${{ matrix.repository }}
       - run: |
-          set -x
           find "$(pwd)"/self/automations/*/ | grep -vE '/$' | while read -r file; do
             new_file=./other/"${file#*/self/automations/*/}"
             if [ -d "$new_file" ]; then continue; fi
