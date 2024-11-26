@@ -13,7 +13,7 @@ jobs:
     steps:
       - run: |
           github() { curl --no-progress-meter -H 'Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}' https://api.github.com"$@"; }
-          github /user/repos | tee /dev/stderr | jq -r '.[].full_name' | grep -E '^plengauer/automate$' | jq -nR '{"include": [inputs | select(length > 0) | {repository: .}]}' | tr -d '\n' | xargs -0 -I {} echo 'repositories={}' >> "$GITHUB_OUTPUT"
+          github /user/repos | jq -r '.[].full_name' | grep -E '^plengauer/automate$' | jq -nR '{"include": [inputs | select(length > 0) | {repository: .}]}' | tr -d '\n' | xargs -0 -I {} echo 'repositories={}' >> "$GITHUB_OUTPUT"
         id: dynamic
 
   onboard:
@@ -32,7 +32,7 @@ jobs:
           path: ./other
           repository: ${{ matrix.repository }}
       - run: |
-          cd ./other/github/workflows
+          cd ./other/.github/workflows
           echo ./self/automations/*/ | while read -r folder; do
             sh -e "$folder"/test.sh || cp "$folder"/*.yaml .
           done
