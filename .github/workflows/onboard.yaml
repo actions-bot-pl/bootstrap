@@ -32,10 +32,9 @@ jobs:
           path: ./other
           repository: ${{ matrix.repository }}
       - run: |
-          echo "$(pwd)"/self/automations/* | while read -r folder; do
-            mkdir -p ./other/.github/workflows
-            cd ./other/.github/workflows
-            sh -e "$folder"/test.sh || cp "$folder"/*.yaml .
+          find "$(pwd)"/self/automations/* | grep -vE '/$' | while read -r file; do
+            new_file=./other/"${file#*/self/automations/*/}"
+            [ -f "$file" ] || (mkdir -p "${new_file%/*}" && cp "$file" "$new_file")
           done
       - uses: peter-evans/create-pull-request@v7
         id: open-pr
