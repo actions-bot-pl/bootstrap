@@ -32,9 +32,9 @@ jobs:
           path: ./other
           repository: ${{ matrix.repository }}
       - run: |
-          find
           echo ./self/automations/* | while read -r folder; do
-            sh -e "$folder"/test.sh || cp "$folder"/*.yaml ./other/.github/workflows
+            cd ./other/.github/workflows
+            sh -e "$folder"/test.sh || cp "$folder"/*.yaml .
           done
       - uses: peter-evans/create-pull-request@v7
         id: open-pr
