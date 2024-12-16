@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: renovate
+  group: rotate
 
 jobs:
   list-repositories:
