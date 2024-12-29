@@ -16,6 +16,6 @@ jobs:
         env:
           RENOVATE_REPOSITORIES: ${{ github.repository }}
           RENOVATE_ONBOARDING_CONFIG_FILE_NAME: .github/renovate.json
-          RENOVATE_ONBOARDING_CONFIG: '{"$schema": "https://docs.renovatebot.com/renovate-schema.json", "extends": ["github>plengauer/automate"]}'
+          RENOVATE_ONBOARDING_CONFIG: '{"$schema": "https://docs.renovatebot.com/renovate-schema.json", "extends": ["github>plengauer/bootstrap"]}'
         with:
           token: ${{ secrets.ACTIONS_GITHUB_TOKEN }}
