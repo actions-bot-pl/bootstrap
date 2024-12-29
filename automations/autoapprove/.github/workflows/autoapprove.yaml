@@ -14,5 +14,5 @@ jobs:
     steps:
       - uses: plengauer/autoapprove@v0.0.5
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }} # TODO give "approve PR permission in settings"
           user_to_approve: ${{ secrets.ACTIONS_GITHUB_TOKEN }}
