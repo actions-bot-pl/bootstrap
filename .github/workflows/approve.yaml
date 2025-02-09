@@ -22,4 +22,4 @@ jobs:
           repository_owner="$(printf '%s' "$GITHUB_PR_LINK" | cut -sd / -f 4)"
           repository_name="$(printf '%s' "$GITHUB_PR_LINK" | cut -sd / -f 5)"
           pr_number="$(printf '%s' "$GITHUB_PR_LINK" | cut -sd / -f 7)"
-          curl --no-progress-meter -H "Authorization: Bearer $GITHUB_TOKEN" "${GITHUB_API_URL:-https://api.github.com}/repo/"$repository_owner"/"$repository_name"/pulls/"$pr_number"/reviews -d '{"event":"APPROVE"}'
+          curl --no-progress-meter -H "Authorization: Bearer $GITHUB_TOKEN" "${GITHUB_API_URL:-https://api.github.com}"/repo/"$repository_owner"/"$repository_name"/pulls/"$pr_number"/reviews -d '{"event":"APPROVE"}'
