@@ -18,6 +18,7 @@ jobs:
           GITHUB_TOKEN: '${{ secrets.ACTIONS_GITHUB_TOKEN }}'
           GITHUB_PR_LINK: '${{ inputs.pr_link }}'
         run: |
+          set -x
           # for example https://github.com/plengauer/opentelemetry-bash/pull/1156/files#diff-0c5b4b151b14df65357bebdc0437cbdaab5ec2f02b4818f23e241ed98f400421
           repository_owner="$(printf '%s' "$GITHUB_PR_LINK" | cut -sd / -f 4)"
           repository_name="$(printf '%s' "$GITHUB_PR_LINK" | cut -sd / -f 5)"
