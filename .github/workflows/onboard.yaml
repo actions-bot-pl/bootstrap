@@ -26,11 +26,11 @@ jobs:
       matrix: ${{ fromJSON(needs.list-repositories.outputs.repositories) }}
       fail-fast: false
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           path: ./self
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           path: ./other
