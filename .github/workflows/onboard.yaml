@@ -41,7 +41,7 @@ jobs:
             if [ -d "$new_file" ]; then continue; fi
             [ -f "$new_file" ] || [ -f "${new_file//yaml/yml}" ] || (mkdir -p "${new_file%/*}" && cp "$file" "$new_file")
           done
-      - uses: peter-evans/create-pull-request@v7
+      - uses: peter-evans/create-pull-request@v8
         id: open-pr
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
