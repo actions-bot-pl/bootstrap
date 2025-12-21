@@ -15,8 +15,7 @@ jobs:
       repositories: ${{ steps.dynamic.outputs.repositories }}
     steps:
       - run: |
-          github() { curl --no-progress-meter -H 'Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}' https://api.github.com"$@"; }
-          github /user/repos'?per_page=100' | jq -r '.[].full_name' | jq -nR '{"include": [inputs | select(length > 0) | {repository: .}]}' | tr -d '\n' | xargs -0 -I {} echo 'repositories={}' >> "$GITHUB_OUTPUT"
+          curl --no-progress-meter -H 'Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}' https://api.github.com/user/repos'?per_page=100' | jq -r '.[].full_name' | jq -nR '{"include": [inputs | select(length > 0) | {repository: .}]}' | tr -d '\n' | xargs -0 -I {} echo 'repositories={}' >> "$GITHUB_OUTPUT"
         id: dynamic
 
   onboard:
