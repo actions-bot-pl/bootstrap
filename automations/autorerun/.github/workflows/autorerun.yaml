@@ -11,6 +11,6 @@ jobs:
   rerun:
     runs-on: ubuntu-slim
     steps:
-      - uses: plengauer/autorerun@v0.34.0
+      - uses: plengauer/autorerun@v0.35.0
         with:
           github_token: ${{ secrets.ACTIONS_GITHUB_TOKEN }}
