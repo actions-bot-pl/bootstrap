@@ -5,11 +5,12 @@ abom-http
 dafuq
 bash-ai
 openai
+autopuppeteer
 autoversion
 autorerun
 autoassign
 autoreview
-autopuppeteer
+autoapprove
 BoomerCode
 opentelemetry-bash-rc 
 Utilities
