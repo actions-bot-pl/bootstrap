@@ -20,7 +20,7 @@ jobs:
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
         with:
-          secrets_to_redact: '["${{ github.token }}","${{ secrets.BOT_GITHUB_TOKEN }}"]'
+          secrets_to_redact: '["${{ github.token }}"]'
       - uses: actions/checkout@v6
       - run: |
           cat repositories.list | jq -R | jq '"plengauer/" + .' | jq '{ repository: . }' | jq -cs '{ include: . }' | tr -d '\n' | xargs -0 -I {} echo 'repositories={}' >> "$GITHUB_OUTPUT"
