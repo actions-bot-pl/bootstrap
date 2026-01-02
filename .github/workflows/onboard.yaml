@@ -3,7 +3,6 @@ name: Onboard
 on:
   schedule:
     - cron: '0 0 * * *'
-  workflow_dispatch:
 
 concurrency:
   group: onboard
@@ -11,7 +10,7 @@ concurrency:
 jobs:
 
   list-repositories:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     outputs:
       repositories: ${{ steps.dynamic.outputs.repositories }}
     steps:
@@ -30,7 +29,7 @@ jobs:
 
   onboard:
     needs: list-repositories
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     strategy:
       matrix: ${{ fromJSON(needs.list-repositories.outputs.repositories) }}
       fail-fast: false
@@ -98,8 +97,8 @@ jobs:
         id: puppeteer
         uses: plengauer/autopuppeteer@v0.0.0
         with:
-          goal: create a new classic pat with the scopes repo, workflow and no expiration date and call it ${{ matrix.repository }}, the result should be the token value itself, make sure to record it because it cant be queried later
-          url: https://github.com/settings/tokens/new
+          goal: 'create a new finegrained PAT with the predefined scopes from the url and no expiration date, restrict it to the repository ${{ matrix.repository }} and call it "GITHUB ACTIONS ${{ matrix.repository }}", the result should be the token value itself, make sure to record it because it cant be queried later'
+          url: https://github.com/settings/personal-access-tokens/new?name=GitHub%20Actions%20${{ matrix.repository }}&expires_in=none&contents=write&actions=write
           openai_api_token: ${{ secrets.OPENAI_TOKEN }}
           username: ${{ secrets.GH_USERNAME }}
           password: ${{ secrets.GH_PASSWORD }}
