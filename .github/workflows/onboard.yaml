@@ -42,7 +42,7 @@ jobs:
           secrets_to_redact: '["${{ github.token }}","${{ secrets.BOT_GITHUB_TOKEN }}"]'
       - uses: actions/checkout@v6
         with:
-          token:  ${{ secrets.BOT_GITHUB_TOKEN }}
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
           path: ./self
       - uses: actions/checkout@v6
         with:
