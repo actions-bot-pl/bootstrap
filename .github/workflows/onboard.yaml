@@ -81,6 +81,12 @@ jobs:
       matrix: ${{ fromJSON(needs.list-repositories.outputs.repositories) }}
       fail-fast: false
     steps:
+      - uses: plengauer/opentelemetry-github/actions/instrument/job@v5.41.0
+        env:
+          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
+        with:
+          secrets_to_redact: '["${{ github.token }}","${{ secrets.BOT_GITHUB_TOKEN }}","${{ secrets.GH_COOKIE }}","${{ secrets.GH_PASSWORD }}","${{ secrets.GH_USERNAME }}","${{ secrets.OPENAI_TOKEN }}"]'
       - id: resolve
         run: |
           ( curl --no-progress-meter -H 'Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}' https://api.github.com/repos/${{ matrix.repository }}/actions/secrets/ACTIONS_GITHUB_TOKEN > /dev/null && echo true || echo false ) | xargs -0 -I '{}' echo exists='{}' >> "$GITHUB_OUTPUT"
@@ -102,3 +108,5 @@ jobs:
           echo ::add-mask::${{ steps.puppeteer.outputs.result }}
           curl --no-progress-meter -H 'Authorization: Bearer ${{ steps.puppeteer.outputs.result }}' https://api.github.com/rate_limit
           printf '%s' "${{ steps.puppeteer.outputs.result }}" | GH_TOKEN=${{ secrets.BOT_GITHUB_TOKEN }} gh secret set ACTIONS_GITHUB_TOKEN --repo ${{ matrix.repository }}
+    permissions:
+      actions: read

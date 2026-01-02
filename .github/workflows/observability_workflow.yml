@@ -13,7 +13,6 @@ on:
       - Copilot coding agent
       - Onboard
       - Renovate
-      - Rotate Tokens
     types:
       - completed
 jobs:
