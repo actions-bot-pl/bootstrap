@@ -9,6 +9,7 @@ concurrency:
   group: onboard
 
 jobs:
+
   list-repositories:
     runs-on: ubuntu-latest
     outputs:
@@ -25,6 +26,7 @@ jobs:
         id: dynamic
     permissions:
       actions: read
+
   onboard:
     needs: list-repositories
     runs-on: ubuntu-latest
@@ -40,7 +42,7 @@ jobs:
           secrets_to_redact: '["${{ github.token }}","${{ secrets.BOT_GITHUB_TOKEN }}"]'
       - uses: actions/checkout@v6
         with:
-          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          token:  ${{ secrets.BOT_GITHUB_TOKEN }}
           path: ./self
       - uses: actions/checkout@v6
         with:
@@ -71,3 +73,32 @@ jobs:
           merge-method: squash
     permissions:
       actions: read
+
+  register-token:
+    needs: list-repositories
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJSON(needs.list-repositories.outputs.repositories) }}
+      fail-fast: false
+    steps:
+      - id: resolve
+        run: |
+          ( curl --no-progress-meter -H 'Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}' https://api.github.com/repos/${{ matrix.repository }}/actions/secrets/ACTIONS_GITHUB_TOKEN > /dev/null && echo true || echo false ) | xargs -0 -I '{}' echo exists='{}' >> "$GITHUB_OUTPUT"
+      - run: |
+          repository="${{ matrix.repository }}"
+          [ "${repository%%/*}" = plengauer ] # as long as one cannot create fine grained tokens for other repos, we should restrict for safety reasons
+      - if: ${{ steps.resolve.outputs.exists == 'false' }}
+        id: puppeteer
+        uses: plengauer/autopuppeteer@v0.0.0
+        with:
+          goal: create a new classic pat with the scopes repo, workflow and no expiration date and call it ${{ matrix.repository }}, the result should be the token value itself, make sure to record it because it cant be queried later
+          url: https://github.com/settings/tokens/new
+          openai_api_token: ${{ secrets.OPENAI_TOKEN }}
+          username: ${{ secrets.GITHUB_USERNAME }}
+          password: ${{ secrets.GITHUB_PASSWORD }}
+          cookie: ${{ secrets.GITHUB_COOKIE }}
+      - if:  ${{ steps.puppeteer.outputs.result != '' }}
+        run: |
+          echo ::add-mask::${{ steps.puppeteer.outputs.result }}
+          curl --no-progress-meter -H 'Authorization: Bearer ${{ steps.puppeteer.outputs.result }}' https://api.github.com/rate_limit
+          printf '%s' "${{ steps.puppeteer.outputs.result }}" | GH_TOKEN=${{ secrets.BOT_GITHUB_TOKEN }} gh secret set ACTIONS_GITHUB_TOKEN --repo ${{ matrix.repository }}
