@@ -54,7 +54,7 @@ jobs:
           find "$(pwd)"/self/automations/*/ | grep -vE '/$' | while read -r file; do
             new_file=./other/"${file#*/self/automations/*/}"
             if [ -d "$new_file" ]; then continue; fi
-            [ -f "$new_file" ] || [ -f "${new_file//yaml/yml}" ] || (mkdir -p "${new_file%/*}" && cp "$file" "$new_file")
+            [ -f "$new_file" ] || [ -f "${new_file//yml/yaml}" ] || (mkdir -p "${new_file%/*}" && cp "$file" "$new_file")
           done
       - uses: peter-evans/create-pull-request@v8
         id: open-pr
