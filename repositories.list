@@ -9,6 +9,7 @@ autoversion
 autorerun
 autoassign
 autoreview
+autopuppeteer
 BoomerCode
 opentelemetry-bash-rc 
 Utilities
