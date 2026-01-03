@@ -80,7 +80,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix: ${{ fromJSON(needs.list-repositories.outputs.repositories) }}
-      fail-fast: false
+      fail-fast: true
     steps:
       - uses: plengauer/opentelemetry-github/actions/instrument/job@v5.41.0
         env:
