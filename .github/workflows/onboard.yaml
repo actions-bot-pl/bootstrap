@@ -22,7 +22,7 @@ jobs:
           secrets_to_redact: '["${{ github.token }}"]'
       - uses: actions/checkout@v6
       - run: |
-          cat repositories.list | jq -R | jq '"plengauer/" + .' | jq '{ repository: . }' | jq -cs '{ include: . }' | tr -d '\n' | xargs -0 -I {} echo 'repositories={}' >> "$GITHUB_OUTPUT"
+          cat repositories.list | while read -r line; do echo "$line"; done | grep -v '#' | jq -R | jq '"plengauer/" + .' | jq '{ repository: . }' | jq -cs '{ include: . }' | tr -d '\n' | xargs -0 -I {} echo 'repositories={}' >> "$GITHUB_OUTPUT"
         id: dynamic
     permissions:
       actions: read
