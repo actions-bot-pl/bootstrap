@@ -5,6 +5,9 @@ on:
     - cron: '0 0 * * *'
   workflow_dispatch:
 
+env:
+  GH_TOKEN_RETENTION: 90
+
 concurrency:
   group: onboard
 
@@ -89,13 +92,13 @@ jobs:
       - id: resolve
         run: |
           created_at="$(curl --fail --no-progress-meter -H 'Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}' https://api.github.com/repos/${{ matrix.repository }}/actions/secrets/ACTIONS_GITHUB_TOKEN | tee /dev/stderr | jq .created_at -r || echo 1970-01-01)"
-          ( [ $(( $(date +%s) - $(date +%s -d "$created_at") )) -gt $((60 * 60 * 24 * 30)) ] && echo true || echo false ) | xargs -0 -I '{}' echo rotate='{}' >> "$GITHUB_OUTPUT"
+          ( [ $(( $(date +%s) - $(date +%s -d "$created_at") )) -gt $((60 * 60 * 24 * (${{ env.GH_TOKEN_RETENTION }} - 5) )) ] && echo true || echo false ) | xargs -0 -I '{}' echo rotate='{}' >> "$GITHUB_OUTPUT"
       - if: ${{ steps.resolve.outputs.rotate == 'true' }}
         id: puppeteer
         uses: plengauer/autopuppeteer@main # v0.0.0
         with:
           goal: 'create a new finegrained PAT with the predefined name, scopes and expiration date from the URL, restrict it to the repository ${{ matrix.repository }}, the result should be the token value itself, make sure to record it because it cant be queried later'
-          url: https://github.com/settings/personal-access-tokens/new?name=GitHub%20Actions%20${{ matrix.repository }}%20${{ github.run_id }}%20${{ github.run_attempt }}&expires_in=90&contents=write&actions=write
+          url: https://github.com/settings/personal-access-tokens/new?name=GitHub%20Actions%20${{ matrix.repository }}%20${{ github.run_id }}%20${{ github.run_attempt }}&expires_in=${{ env.GH_TOKEN_RETENTION}}&contents=write&actions=write
           openai_api_token: ${{ secrets.OPENAI_TOKEN }}
           username: ${{ secrets.GH_USERNAME }}
           password: ${{ secrets.GH_PASSWORD }}
