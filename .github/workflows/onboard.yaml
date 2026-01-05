@@ -31,6 +31,36 @@ jobs:
     permissions:
       actions: read
 
+  deploy-codeowners:
+    needs: list-repositories
+    runs-on: ubuntu-slim
+    strategy:
+      matrix: ${{ fromJSON(needs.list-repositories.outputs.repositories) }}
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+      - run: |
+          [ -r .github/CODEOWNERS ] || echo '* @${{ github.repository_owner }}' > .github/CODEOWNERS
+      - uses: peter-evans/create-pull-request@v8
+        id: open-pr
+        with:
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          path: ./other
+          commit-message: "Onboard codeowners"
+          branch: "automate-onboard-codeowners"
+          title: "Onboard codeowners"
+          delete-branch: true
+      - uses: peter-evans/enable-pull-request-automerge@v3
+        if: steps.open-pr.outputs.pull-request-number != null
+        with:
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          repository: ${{ matrix.repository }}
+          pull-request-number: ${{ steps.open-pr.outputs.pull-request-number }}
+          merge-method: squash
+    
+
   deploy-actions:
     needs: list-repositories
     runs-on: ubuntu-slim
@@ -65,7 +95,7 @@ jobs:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           path: ./other
           commit-message: "Onboard automations"
-          branch: "automate-onboard"
+          branch: "automate-onboard-actions"
           title: "Onboard automations"
           delete-branch: true
       - uses: peter-evans/enable-pull-request-automerge@v3
