@@ -47,7 +47,6 @@ jobs:
         id: open-pr
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
-          path: ./other
           commit-message: "Onboard codeowners"
           branch: "automate-onboard-codeowners"
           title: "Onboard codeowners"
