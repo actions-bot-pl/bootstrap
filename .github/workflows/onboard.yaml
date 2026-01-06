@@ -32,6 +32,7 @@ jobs:
       actions: read
 
   init-ruleset:
+    needs: list-repositories
     runs-on: ubuntu-slim
     strategy:
       matrix: ${{ fromJSON(needs.list-repositories.outputs.repositories) }}
