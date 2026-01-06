@@ -31,7 +31,7 @@ jobs:
     permissions:
       actions: read
 
-  init-config:
+  init-ruleset:
     runs-on: ubuntu-slim
     strategy:
       matrix: ${{ fromJSON(needs.list-repositories.outputs.repositories) }}
@@ -87,7 +87,6 @@ jobs:
             ]
           }
           EOF
-          ruleset_id="$(gh_api /rulesets | jq .[].id)"
 
   deploy-codeowners:
     needs: list-repositories
