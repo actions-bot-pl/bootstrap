@@ -209,10 +209,12 @@ jobs:
           cookie: ${{ secrets.GH_COOKIE }}
       - if:  ${{ steps.resolve.outputs.rotate == 'true' }}
         run: |
-          [ -n '${{ steps.puppeteer.outputs.result }}' ]
-          echo ::add-mask::${{ steps.puppeteer.outputs.result }}
-          curl --no-progress-meter -H 'Authorization: Bearer ${{ steps.puppeteer.outputs.result }}' https://api.github.com/rate_limit
-          GH_TOKEN=${{ secrets.BOT_GITHUB_TOKEN }} gh secret set ACTIONS_GITHUB_TOKEN --repo ${{ matrix.repository }} <<< "${{ steps.puppeteer.outputs.result }}"
+          [ -r '${{ steps.puppeteer.outputs.result_path }}' ]
+          token="$(cat ${{ steps.puppeteer.outputs.result_path }})"
+          [ -n "$token" ]
+          echo ::add-mask::"$token"
+          curl --no-progress-meter -H "Authorization: Bearer $token" https://api.github.com/rate_limit
+          GH_TOKEN=${{ secrets.BOT_GITHUB_TOKEN }} gh secret set ACTIONS_GITHUB_TOKEN --repo ${{ matrix.repository }} <<< "$token"
     permissions:
       actions: read
 
