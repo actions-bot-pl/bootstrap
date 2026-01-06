@@ -26,17 +26,74 @@ jobs:
           secrets_to_redact: '["${{ github.token }}"]'
       - uses: actions/checkout@v6.0.0
       - run: |
-          cat repositories.list | while read -r line; do echo "$line"; done | grep -v '#' | jq -R | jq '"plengauer/" + .' | jq '{ repository: . }' | jq -cs '{ include: . }' | tr -d '\n' | xargs -0 -I {} echo 'repositories={}' >> "$GITHUB_OUTPUT"
+          cat repositories.list | while read -r line; do echo "$line"; done | grep -v '#' | jq -R | jq '"plengauer/" + .' | jq -cs | xargs -0 -I {} echo 'repositories={}' >> "$GITHUB_OUTPUT"
         id: dynamic
     permissions:
       actions: read
+
+  init-config:
+    runs-on: ubuntu-slim
+    strategy:
+      matrix: ${{ fromJSON(needs.list-repositories.outputs.repositories) }}
+    steps:
+      - run: |
+          gh_api() {
+            curl -s --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/repos/${{ matrix.repository }}
+          }
+          [ "$(gh_api /rulesets | jq length)" != 0 ] || exit 0
+          gh_api /rulesets -d @- << EOF
+          {
+            "name": "main",
+            "enforcement": "active",
+            "conditions": {
+              "ref_name": {
+                "include": [ "~DEFAULT_BRANCH" ],
+                "exclude": []
+              }
+            },
+            "rules": [
+              { "type": "creation" },
+              { "type": "deletion" },
+              {
+                "type": "pull_request",
+                "parameters": {
+                  "required_approving_review_count": 1,
+                  "dismiss_stale_reviews_on_push": true,
+                  "required_reviewers": [],
+                  "require_code_owner_review": true,
+                  "require_last_push_approval": true,
+                  "required_review_thread_resolution": true,
+                  "allowed_merge_methods": [ "squash" ]
+              },
+              {
+                "type": "code_scanning",
+                "parameters": {
+                  "code_scanning_tools": [
+                    {
+                      "tool": "CodeQL",
+                      "security_alerts_threshold": "high_or_higher",
+                      "alerts_threshold": "errors"
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "copilot_code_review",
+                "parameters": {
+                  "review_on_push": true,
+                  "review_draft_pull_requests": false
+                }
+              }
+            ]
+          }
+          EOF
+          ruleset_id="$(gh_api /rulesets | jq .[].id)"
 
   deploy-codeowners:
     needs: list-repositories
     runs-on: ubuntu-slim
     strategy:
       matrix: ${{ fromJSON(needs.list-repositories.outputs.repositories) }}
-      fail-fast: false
     steps:
       - uses: actions/checkout@v6
         with:
@@ -52,6 +109,7 @@ jobs:
           branch: "automate-onboard-codeowners"
           title: "Onboard codeowners"
           delete-branch: true
+      - run: sleep 60
       - uses: peter-evans/enable-pull-request-automerge@v3.0.0
         if: steps.open-pr.outputs.pull-request-number != null
         with:
@@ -60,12 +118,25 @@ jobs:
           pull-request-number: ${{ steps.open-pr.outputs.pull-request-number }}
           merge-method: squash
 
+  list-actions:
+    runs-on: ubuntu-slim
+    outputs:
+      actions: ${{ steps.dynamic.outputs.actions }}
+    steps:
+      - uses: actions/checkout@v6.0.0
+        with:
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+      - run: |
+          ls automations | grep -vE '/$' | jq -R | jq -cs | xargs -0 -I {} echo 'actions={}' >> "$GITHUB_OUTPUT"
+        id: dynamic
+
   deploy-actions:
-    needs: list-repositories
+    needs: [ list-repositories, list-actions ]
     runs-on: ubuntu-slim
     strategy:
-      matrix: ${{ fromJSON(needs.list-repositories.outputs.repositories) }}
-      fail-fast: false
+      matrix:
+        repository: ${{ fromJSON(needs.list-repositories.outputs.repositories) }}
+        action: ${{ fromJSON(needs.list-actions.outputs.actions) }}
     steps:
       - uses: plengauer/opentelemetry-github/actions/instrument/job@v5.41.0
         env:
@@ -83,7 +154,7 @@ jobs:
           path: ./other
           repository: ${{ matrix.repository }}
       - run: |
-          find "$(pwd)"/self/automations/*/ | grep -vE '/$' | while read -r file; do
+          find "$(pwd)"/self/automations/${{ matrix.action }} | grep -vE '/$' | while read -r file; do
             new_file=./other/"${file#*/self/automations/*/}"
             if [ -d "$new_file" ]; then continue; fi
             [ -f "$new_file" ] || [ -f "${new_file//yml/yaml}" ] || (mkdir -p "${new_file%/*}" && cp "$file" "$new_file")
@@ -93,10 +164,11 @@ jobs:
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           path: ./other
-          commit-message: "Onboard automations"
-          branch: "automate-onboard-actions"
-          title: "Onboard automations"
+          commit-message: "Onboard action ${{ matrix.action }}"
+          branch: "automate-onboard-action-${{ matrix.action }}"
+          title: "Onboard action ${{ matrix.action }}"
           delete-branch: true
+      - run: sleep 60
       - uses: peter-evans/enable-pull-request-automerge@v3.0.0
         if: steps.open-pr.outputs.pull-request-number != null
         with:
@@ -107,11 +179,12 @@ jobs:
     permissions:
       actions: read
 
-  deploy-token:
+  deploy-gh-token:
     needs: list-repositories
     runs-on: ubuntu-latest
     strategy:
-      matrix: ${{ fromJSON(needs.list-repositories.outputs.repositories) }}
+      matrix:
+        repository: ${{ fromJSON(needs.list-repositories.outputs.repositories) }}
       fail-fast: true
       max-parallel: 1
     steps:
@@ -120,7 +193,7 @@ jobs:
           [ "${repository%%/*}" = plengauer ] # as long as one cannot create fine grained tokens for other repos, we should restrict for safety reasons
       - id: resolve
         run: |
-          created_at="$(curl --fail --no-progress-meter -H 'Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}' https://api.github.com/repos/${{ matrix.repository }}/actions/secrets/ACTIONS_GITHUB_TOKEN | tee /dev/stderr | jq .created_at -r || echo 1970-01-01)"
+          created_at="$(curl --fail --no-progress-meter -H 'Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}' https://api.github.com/repos/${{ matrix.repository }}/actions/secrets/ACTIONS_GITHUB_TOKEN | jq .created_at -r || echo 1970-01-01)"
           ( [ $(( $(date +%s) - $(date +%s -d "$created_at") )) -gt $((60 * 60 * 24 * ${{ env.GH_TOKEN_RETENTION }} * 95 / 100)) ] && echo true || echo false ) | xargs -0 -I '{}' echo rotate='{}' >> "$GITHUB_OUTPUT"
       - if: ${{ steps.resolve.outputs.rotate == 'true' }}
         id: puppeteer
@@ -137,6 +210,20 @@ jobs:
           [ -n '${{ steps.puppeteer.outputs.result }}' ]
           echo ::add-mask::${{ steps.puppeteer.outputs.result }}
           curl --no-progress-meter -H 'Authorization: Bearer ${{ steps.puppeteer.outputs.result }}' https://api.github.com/rate_limit
-          printf '%s' "${{ steps.puppeteer.outputs.result }}" | GH_TOKEN=${{ secrets.BOT_GITHUB_TOKEN }} gh secret set ACTIONS_GITHUB_TOKEN --repo ${{ matrix.repository }}
+          GH_TOKEN=${{ secrets.BOT_GITHUB_TOKEN }} gh secret set ACTIONS_GITHUB_TOKEN --repo ${{ matrix.repository }} <<< "${{ steps.puppeteer.outputs.result }}"
     permissions:
       actions: read
+
+  deploy-dt-token:
+    needs: list-repositories
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJSON(needs.list-repositories.outputs.repositories) }}
+    steps:
+      - run: |
+          curl --fail --no-progress-meter -H 'Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}' https://api.github.com/repos/${{ matrix.repository }}/actions/secrets/OTEL_EXPORTER_OTLP_ENDPOINT \
+            || GH_TOKEN=${{ secrets.BOT_GITHUB_TOKEN }} gh secret set OTEL_EXPORTER_OTLP_ENDPOINT --repo ${{ matrix.repository }} <<< "${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}"
+      - run: |
+          curl --fail --no-progress-meter -H 'Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}' https://api.github.com/repos/${{ matrix.repository }}/actions/secrets/OTEL_EXPORTER_OTLP_ENDPOINT \
+            || GH_TOKEN=${{ secrets.BOT_GITHUB_TOKEN }} gh secret set OTEL_EXPORTER_OTLP_HEADERS --repo ${{ matrix.repository }} <<< "${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}"
+        
