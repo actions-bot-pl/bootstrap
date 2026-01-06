@@ -132,8 +132,9 @@ jobs:
           username: ${{ secrets.GH_USERNAME }}
           password: ${{ secrets.GH_PASSWORD }}
           cookie: ${{ secrets.GH_COOKIE }}
-      - if:  ${{ steps.puppeteer.outputs.result != '' }}
+      - if:  ${{ steps.resolve.outputs.rotate == 'true' }}
         run: |
+          [ -n '${{ steps.puppeteer.outputs.result }}' ]
           echo ::add-mask::${{ steps.puppeteer.outputs.result }}
           curl --no-progress-meter -H 'Authorization: Bearer ${{ steps.puppeteer.outputs.result }}' https://api.github.com/rate_limit
           printf '%s' "${{ steps.puppeteer.outputs.result }}" | GH_TOKEN=${{ secrets.BOT_GITHUB_TOKEN }} gh secret set ACTIONS_GITHUB_TOKEN --repo ${{ matrix.repository }}
