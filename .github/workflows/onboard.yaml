@@ -1,6 +1,9 @@
 name: Onboard
 
 on:
+  push:
+    paths:
+      - repositories.list
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
@@ -40,7 +43,7 @@ jobs:
     steps:
       - run: |
           gh_api() {
-            curl -s --fail --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/repos/${{ matrix.repository }}"$@"
+            curl -v -s --fail --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/repos/${{ matrix.repository }}"$@"
           }
           [ "$(gh_api /rulesets | jq length)" != 0 ] || exit 0
           gh_api /rulesets -d @- << EOF
