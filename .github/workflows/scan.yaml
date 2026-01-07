@@ -1,0 +1,37 @@
+name: Scan
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+
+concurrency:
+  group: scan
+
+jobs:
+
+  scan:
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@v6.0.0
+      - run: |
+          curl -s --fail --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/user/repos \
+            | jq '.[] | select(.owner.login == "${{ github.repository_owner }}") | .name' -r \
+            | grep -vF "$(cat repositories.list | sed 's/^#//g' | tr -d ' ')" \
+            | tee -a repositories.list
+      - uses: peter-evans/create-pull-request@v8.0.0
+        id: open-pr
+        with:
+          token: ${{ secrets.ACTIONS_GITHUB_TOKEN }}
+          commit-message: "Onboard repositories"
+          branch: "automate-onboard-repositories"
+          title: "Onboard repositories"
+          delete-branch: true
+      - run: sleep 60
+      - uses: peter-evans/enable-pull-request-automerge@v3.0.0
+        if: steps.open-pr.outputs.pull-request-number != null
+        with:
+          token: ${{ secrets.ACTIONS_GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.open-pr.outputs.pull-request-number }}
+          merge-method: squash
+    permissions:
+      actions: read
