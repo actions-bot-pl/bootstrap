@@ -45,7 +45,7 @@ jobs:
           gh_api() {
             curl -v -s --fail --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/repos/${{ matrix.repository }}"$@"
           }
-          [ "$(gh_api /rulesets | jq length)" != 0 ] || exit 0
+          [ "$(gh_api /rulesets | jq length)" = 0 ] || exit 0
           gh_api /rulesets -d @- << EOF
           {
             "name": "main",
