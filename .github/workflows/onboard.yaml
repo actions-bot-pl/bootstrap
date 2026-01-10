@@ -118,6 +118,7 @@ jobs:
           title: "Onboard codeowners"
           delete-branch: true
       - run: sleep 60
+        if: steps.open-pr.outputs.pull-request-number != null
       - uses: peter-evans/enable-pull-request-automerge@v3.0.0
         if: steps.open-pr.outputs.pull-request-number != null
         with:
@@ -178,6 +179,7 @@ jobs:
           title: "Onboard action ${{ matrix.action }}"
           delete-branch: true
       - run: sleep 60
+        if: steps.open-pr.outputs.pull-request-number != null
       - uses: peter-evans/enable-pull-request-automerge@v3.0.0
         if: steps.open-pr.outputs.pull-request-number != null
         with:
