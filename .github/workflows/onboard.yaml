@@ -34,6 +34,18 @@ jobs:
     permissions:
       actions: read
 
+  init-settings:
+    needs: list-repositories
+    runs-on: ubuntu-slim
+    strategy:
+      matrix:
+        repository: ${{ fromJSON(needs.list-repositories.outputs.repositories) }}
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v6.0.0
+      - run: |
+          curl -s --fail --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/repos/${{ matrix.repository }} -d @./template/settings.json
+
   init-ruleset:
     needs: list-repositories
     runs-on: ubuntu-slim
@@ -42,58 +54,10 @@ jobs:
         repository: ${{ fromJSON(needs.list-repositories.outputs.repositories) }}
       fail-fast: false
     steps:
+      - uses: actions/checkout@v6.0.0
       - run: |
-          gh_api() {
-            curl -s --fail --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/repos/${{ matrix.repository }}"$@"
-          }
-          [ "$(gh_api /rulesets | jq length)" = 0 ] || exit 0
-          gh_api /rulesets -d @- << EOF
-          {
-            "name": "main",
-            "enforcement": "active",
-            "conditions": {
-              "ref_name": {
-                "include": [ "~DEFAULT_BRANCH" ],
-                "exclude": []
-              }
-            },
-            "rules": [
-              { "type": "creation" },
-              { "type": "deletion" },
-              {
-                "type": "pull_request",
-                "parameters": {
-                  "required_approving_review_count": 1,
-                  "dismiss_stale_reviews_on_push": true,
-                  "required_reviewers": [],
-                  "require_code_owner_review": true,
-                  "require_last_push_approval": true,
-                  "required_review_thread_resolution": true,
-                  "allowed_merge_methods": [ "squash" ]
-                }
-              },
-              {
-                "type": "code_scanning",
-                "parameters": {
-                  "code_scanning_tools": [
-                    {
-                      "tool": "CodeQL",
-                      "security_alerts_threshold": "high_or_higher",
-                      "alerts_threshold": "errors"
-                    }
-                  ]
-                }
-              },
-              {
-                "type": "copilot_code_review",
-                "parameters": {
-                  "review_on_push": true,
-                  "review_draft_pull_requests": false
-                }
-              }
-            ]
-          }
-          EOF
+          [ "$(curl -s --fail --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/repos/${{ matrix.repository }}/rulesets | jq length)" = 0 ] || exit 0
+          curl -s --fail --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/repos/${{ matrix.repository }}/rulesets -d @./template/rulesets.json
 
   deploy-codeowners:
     needs: list-repositories
