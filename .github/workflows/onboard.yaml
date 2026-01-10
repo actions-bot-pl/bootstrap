@@ -44,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6.0.0
       - run: |
-          curl -s --fail --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/repos/${{ matrix.repository }} -d @./template/settings.json
+          curl -s --fail --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/repos/${{ matrix.repository }} -d @./template/settings.json -X PATCH
 
   init-ruleset:
     needs: list-repositories
