@@ -41,20 +41,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6.0.0
       - run: |
-          curl -s --fail-with-body --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/repos/${{ matrix.repository }} -d @./template/settings.json -X PATCH
-
-  init-ruleset:
-    needs: list-repositories
-    runs-on: ubuntu-slim
-    strategy:
-      matrix:
-        repository: ${{ fromJSON(needs.list-repositories.outputs.repositories) }}
-      fail-fast: false
-    steps:
-      - uses: actions/checkout@v6.0.0
-      - run: |
           [ "$(curl -s --fail --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/repos/${{ matrix.repository }}/rulesets | jq length)" = 0 ] || exit 0
           curl -s --fail-with-body --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/repos/${{ matrix.repository }}/rulesets -d @./template/rulesets.json
+          curl -s --fail-with-body --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/repos/${{ matrix.repository }} -d @./template/settings.json -X PATCH
 
   deploy-codeowners:
     needs: list-repositories
@@ -94,10 +83,8 @@ jobs:
       actions: ${{ steps.dynamic.outputs.actions }}
     steps:
       - uses: actions/checkout@v6.0.0
-        with:
-          token: ${{ secrets.BOT_GITHUB_TOKEN }}
       - run: |
-          ls template | while read -r automation; do [ -d "$template"/"$automation" ] && echo "$automation" || true; done | jq -R | jq -cs | xargs -0 -I {} echo 'actions={}' >> "$GITHUB_OUTPUT"
+          ls template | while read -r automation; do [ -d template/"$automation" ] && echo "$automation" || true; done | jq -R | jq -cs | xargs -0 -I {} echo 'actions={}' >> "$GITHUB_OUTPUT"
         id: dynamic
 
   deploy-action:
@@ -163,12 +150,7 @@ jobs:
       - run: |
           repository="${{ matrix.repository }}"
           [ "${repository%%/*}" = plengauer ] # as long as one cannot create fine grained tokens for other repos, we should restrict for safety reasons
-      - id: resolve
-        run: |
-          created_at="$(curl --fail --no-progress-meter -H 'Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}' https://api.github.com/repos/${{ matrix.repository }}/actions/secrets/ACTIONS_GITHUB_TOKEN | jq .updated_at -r || echo 1970-01-01)"
-          ( [ $(( $(date +%s) - $(date +%s -d "$created_at") )) -gt $((60 * 60 * 24 * ${{ env.GH_TOKEN_RETENTION }} * 95 / 100)) ] && echo true || echo false ) | xargs -0 -I '{}' echo rotate='{}' >> "$GITHUB_OUTPUT"
-      - if:  ${{ steps.resolve.outputs.rotate == 'true' }}
-        id: metadata
+      - id: metadata
         run: |
           repository='${{ matrix.repository }}'
           token_name="$GitHub Actions $(echo "${repository#*/} ${{ github.run_id }} ${{ github.run-attempt }}" | md5sum | cut -d - -f 1 | tr -d ' ')"
@@ -177,6 +159,10 @@ jobs:
           echo token_name="$token_name" >> "$GITHUB_OUTPUT"
           jq < template/token_permissions.json 'to_entries | .[] | .key + "=" + .value' -rc | tr '\n' '&' | xargs -I '{}' echo token_permissions='{}' >> "$GITHUB_OUTPUT"
           xargs < template/token_retention.days -I '{}' echo token_retention='{}' >> "$GITHUB_OUTPUT"
+      - id: resolve
+        run: |
+          created_at="$(curl --fail --no-progress-meter -H 'Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}' https://api.github.com/repos/${{ matrix.repository }}/actions/secrets/ACTIONS_GITHUB_TOKEN | jq .updated_at -r || echo 1970-01-01)"
+          ( [ $(( $(date +%s) - $(date +%s -d "$created_at") )) -gt $((60 * 60 * 24 * ${{ steps.metadata.outputs.token_retention }} * 95 / 100)) ] && echo true || echo false ) | xargs -0 -I '{}' echo rotate='{}' >> "$GITHUB_OUTPUT"
       - if: ${{ steps.resolve.outputs.rotate == 'true' }}
         id: puppeteer
         uses: plengauer/autopuppeteer@main # v0.0.0
