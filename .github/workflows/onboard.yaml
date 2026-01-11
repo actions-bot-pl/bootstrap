@@ -144,7 +144,7 @@ jobs:
           token_name="${token_name:0:40}"
           token_name="${token_name// /%20}"
           echo token_name="$token_name" >> "$GITHUB_OUTPUT"
-          jq < template/token_permissions.json 'to_entries | .[] | .key + "=" + .value' -r | tr '\n' ',' | xargs -I '{}' echo token_permissions='{}' >> "$GITHUB_OUTPUT"
+          jq < template/token_permissions.json 'to_entries | .[] | .key + "=" + .value' -r | grep -v '^$' | tr '\n' ',' | xargs -I '{}' echo token_permissions='{}' >> "$GITHUB_OUTPUT"
           xargs < template/token_retention.days -I '{}' echo token_retention='{}' >> "$GITHUB_OUTPUT"
       - id: resolve
         run: |
@@ -152,7 +152,7 @@ jobs:
           ( [ $(( $(date +%s) - $(date +%s -d "$created_at") )) -gt $((60 * 60 * 24 * ${{ steps.metadata.outputs.token_retention }} * 95 / 100)) ] && echo true || echo false ) | xargs -0 -I '{}' echo rotate='{}' >> "$GITHUB_OUTPUT"
       - if: ${{ steps.resolve.outputs.rotate == 'true' }}
         id: create
-        uses: plengauer/create-github-finegrained-pat@v0.0.2
+        uses: plengauer/create-github-finegrained-pat@v0.0.3
         with:
           name: ${{ steps.metadata.outputs.token_name }}
           expiration: ${{ steps.metadata.outputs.token_retention }}
