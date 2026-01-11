@@ -144,7 +144,7 @@ jobs:
           token_name="${token_name:0:40}"
           token_name="${token_name// /%20}"
           echo token_name="$token_name" >> "$GITHUB_OUTPUT"
-          jq < template/token_permissions.json 'to_entries | .[] | .key + "=" + .value' -r | grep -v '^$' | tr '\n' ',' | xargs -I '{}' echo token_permissions='{}' >> "$GITHUB_OUTPUT"
+          jq < template/token_permissions.json 'to_entries | .[] | .key + "=" + .value' -r | perl -p -e 'chomp if eof' | tr '\n' ',' | xargs -I '{}' echo token_permissions='{}' >> "$GITHUB_OUTPUT"
           xargs < template/token_retention.days -I '{}' echo token_retention='{}' >> "$GITHUB_OUTPUT"
       - id: resolve
         run: |
