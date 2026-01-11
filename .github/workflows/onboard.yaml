@@ -154,7 +154,7 @@ jobs:
       - id: metadata
         run: |
           repository='${{ matrix.repository }}'
-          token_name="$GitHub Actions $(echo "${repository#*/} ${{ github.run_id }} ${{ github.run-attempt }}" | md5sum | cut -d - -f 1 | tr -d ' ')"
+          token_name="GitHub Actions $(echo "${repository#*/} ${{ github.run_id }} ${{ github.run-attempt }}" | md5sum | cut -d - -f 1 | tr -d ' ')"
           token_name="${token_name:0:40}"
           token_name="${token_name// /%20}"
           echo token_name="$token_name" >> "$GITHUB_OUTPUT"
