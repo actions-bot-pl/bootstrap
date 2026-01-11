@@ -150,6 +150,7 @@ jobs:
       - run: |
           repository="${{ matrix.repository }}"
           [ "${repository%%/*}" = plengauer ] # as long as one cannot create fine grained tokens for other repos, we should restrict for safety reasons
+      - uses: actions/checkout@v6.0.0
       - id: metadata
         run: |
           repository='${{ matrix.repository }}'
