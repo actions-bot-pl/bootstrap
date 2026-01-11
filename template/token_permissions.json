@@ -1,0 +1,5 @@
+{
+  "contents": "write",
+  "workflows": "write",
+  "security_events": "write"
+}
