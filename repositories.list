@@ -9,8 +9,6 @@ openai
 autopuppeteer
 autoversion
 autorerun
-autoassign
-autoreview
 autoapprove
 opentelemetry-bash-rc 
 Utilities
