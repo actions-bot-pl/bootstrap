@@ -20,7 +20,7 @@ jobs:
     outputs:
       repositories: ${{ steps.dynamic.outputs.repositories }}
     steps:
-      - uses: actions/checkout@v6.0.0
+      - uses: actions/checkout@v6.0.1
       - run: |
           cat repositories.list | while read -r line; do echo "$line"; done | grep -v '#' | sort -R | head -n 256 | jq -R | jq '"plengauer/" + .' | jq -cs | xargs -0 -I {} echo 'repositories={}' >> "$GITHUB_OUTPUT"
         id: dynamic
@@ -33,7 +33,7 @@ jobs:
         repository: ${{ fromJSON(needs.list-repositories.outputs.repositories) }}
       fail-fast: false
     steps:
-      - uses: actions/checkout@v6.0.0
+      - uses: actions/checkout@v6.0.1
       - run: |
           [ "$(curl -s --fail --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/repos/${{ matrix.repository }}/rulesets | jq length)" = 0 ] || exit 0
           curl -s --fail-with-body --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/repos/${{ matrix.repository }} -d @./template/settings.json -X PATCH
@@ -76,7 +76,7 @@ jobs:
     outputs:
       actions: ${{ steps.dynamic.outputs.actions }}
     steps:
-      - uses: actions/checkout@v6.0.0
+      - uses: actions/checkout@v6.0.1
       - run: |
           ls template | while read -r automation; do [ -d template/"$automation" ] && echo "$automation" || true; done | jq -R | jq -cs | xargs -0 -I {} echo 'actions={}' >> "$GITHUB_OUTPUT"
         id: dynamic
@@ -90,11 +90,11 @@ jobs:
         action: ${{ fromJSON(needs.list-actions.outputs.actions) }}
       fail-fast: false
     steps:
-      - uses: actions/checkout@v6.0.0
+      - uses: actions/checkout@v6.0.1
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           path: ./self
-      - uses: actions/checkout@v6.0.0
+      - uses: actions/checkout@v6.0.1
         with:
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           path: ./other
@@ -136,7 +136,7 @@ jobs:
       - run: |
           repository="${{ matrix.repository }}"
           [ "${repository%%/*}" = plengauer ] # as long as one cannot create fine grained tokens for other repos, we should restrict for safety reasons
-      - uses: actions/checkout@v6.0.0
+      - uses: actions/checkout@v6.0.1
       - id: metadata
         run: |
           repository='${{ matrix.repository }}'
