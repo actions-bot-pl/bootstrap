@@ -9,6 +9,7 @@ on:
       - Copilot coding agent
       - Onboard
       - Renovate
+      - Scan
     types:
       - completed
 jobs:
