@@ -17,6 +17,12 @@ jobs:
   scan:
     runs-on: ubuntu-slim
     steps:
+      - uses: plengauer/opentelemetry-github/actions/instrument/job@v5.41.0
+        env:
+          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
+        with:
+          secrets_to_redact: '["${{ github.token }}","${{ secrets.ACTIONS_GITHUB_TOKEN }}","${{ secrets.BOT_GITHUB_TOKEN }}"]'
       - uses: actions/checkout@v6.0.1
       - run: |
           curl -s --fail --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/user/repos \
