@@ -107,7 +107,7 @@ jobs:
           done
 
   deploy-codeowners:
-    needs: list-repositories
+    needs: [ list-repositories, init-settings ]
     runs-on: ubuntu-slim
     strategy:
       matrix: 
@@ -164,7 +164,7 @@ jobs:
     permissions:
       actions: read
   deploy-action:
-    needs: [ list-repositories, list-actions ]
+    needs: [ list-repositories, list-actions, init-settings, deploy-gh-token, deploy-dt-token ]
     runs-on: ubuntu-slim
     strategy:
       matrix:
