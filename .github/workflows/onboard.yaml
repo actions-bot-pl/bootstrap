@@ -47,8 +47,20 @@ jobs:
         with:
           secrets_to_redact: '["${{ github.token }}","${{ secrets.BOT_GITHUB_TOKEN }}"]'
       - uses: actions/checkout@v6.0.1
-      - run: |
-          [ "$(curl -s --fail --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/repos/${{ matrix.repository }}/rulesets | jq length)" = 0 ] || exit 0
+      - id: check
+        run: |
+          [ "$(curl -s --fail --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/repos/${{ matrix.repository }}/rulesets | jq length)" != 0 ] || echo "initialize=true" >> "$GITHUB_OUTPUT"
+      - if: ${{ steps.check.outputs.initialize == 'true' }}
+        uses: plengauer/autopuppeteer@v0.0.8
+        with:
+          goal: set up and enable CodeQL analysis with default settings, or do nothing if it is already enabled
+          url: https://github.com/${{ matrix.repository }}/settings/security_analysis
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GH_PASSWORD }}
+          cookie: ${{ secrets.GH_COOKIE }}
+          openai_api_token: ${{ secrets.OPENAI_TOKEN }}
+      - if: ${{ steps.check.outputs.initialize == 'true' }}
+        run: |
           curl -s --fail-with-body --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/repos/${{ matrix.repository }} -d @./template/settings.json -X PATCH
           curl -s --fail-with-body --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/repos/${{ matrix.repository }}/rulesets -d @./template/rulesets.json
     permissions:
