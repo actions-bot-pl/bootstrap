@@ -61,6 +61,13 @@ jobs:
           openai_api_token: ${{ secrets.OPENAI_TOKEN }}
       - if: ${{ steps.check.outputs.initialize == 'true' }}
         run: |
+          if [ only one collaborator ]; then
+            jq < ./template/settings.json '(.rules | select(.type == "pull request").parameters.required_approving_review_count = 0)' > tmp.json && cp tmp.json ./template.settings.json && rm tmp.json
+            jq < ./template/settings.json '(.rules | select(.type == "pull request").parameters.require_last_push_approval = false)' > tmp.json && cp tmp.json ./template.settings.json && rm tmp.json
+          fi
+          if [ has code owner with more than one entry ]; then
+            jq < ./template/settings.json '(.rules | select(.type == "pull request").parameters.require_code_owner_review = false)' > tmp.json && cp tmp.json ./template.settings.json && rm tmp.json
+          fi
           curl -s --fail-with-body --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/repos/${{ matrix.repository }} -d @./template/settings.json -X PATCH
           curl -s --fail-with-body --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/repos/${{ matrix.repository }}/rulesets -d @./template/rulesets.json
     permissions:
