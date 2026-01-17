@@ -47,7 +47,15 @@ jobs:
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
         with:
-          secrets_to_redact: '["${{ github.token }}","${{ secrets.BOT_GITHUB_TOKEN }}"]'
+          secrets_to_redact: '${{ github.token }}
+
+            ${{ secrets.BOT_GITHUB_TOKEN }}
+
+            ${{ secrets.GH_COOKIE }}
+
+            ${{ secrets.GH_PASSWORD }}
+
+            ${{ secrets.OPENAI_TOKEN }}'
       - uses: actions/checkout@v6.0.1
       - id: check
         run: |
@@ -105,7 +113,8 @@ jobs:
             jq < ruleset.json '{ "name": .name, "target": .target, "enforcement": .enforcement, "bypass_actors": .bypass_actors, "conditions": .conditions, "rules": .rules }' \
               | curl -s --fail-with-body --header "Authorization: Bearer $GH_TOKEN" https://api.github.com/repos/${{ matrix.repository }}/rulesets/"$id" -d @- -X PATCH
           done
-
+    permissions:
+      actions: read
   deploy-codeowners:
     needs: [ list-repositories, init-settings ]
     runs-on: ubuntu-slim
