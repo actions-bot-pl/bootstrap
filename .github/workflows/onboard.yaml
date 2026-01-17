@@ -32,6 +32,7 @@ jobs:
         id: dynamic
     permissions:
       actions: read
+
   init-settings:
     needs: list-repositories
     runs-on: ubuntu-slim
@@ -39,6 +40,7 @@ jobs:
       matrix:
         repository: ${{ fromJSON(needs.list-repositories.outputs.repositories) }}
       fail-fast: false
+      max-parallel: 1
     steps:
       - uses: plengauer/opentelemetry-github/actions/instrument/job@v5.42.0
         env:
@@ -65,8 +67,47 @@ jobs:
           curl -s --fail-with-body --header "Authorization: Bearer ${{ secrets.BOT_GITHUB_TOKEN }}" https://api.github.com/repos/${{ matrix.repository }}/rulesets -d @./template/rulesets.json
     permissions:
       actions: read
+
+  adjust-settings:
+    needs: [ list-repositories, init-settings ]
+    runs-on: ubuntu-slim
+    strategy:
+      matrix:
+        repository: ${{ fromJSON(needs.list-repositories.outputs.repositories) }}
+      fail-fast: false
+    steps:
+      - uses: plengauer/opentelemetry-github/actions/instrument/job@v5.42.0
+        env:
+          OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+          OTEL_EXPORTER_OTLP_HEADERS: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
+        with:
+          secrets_to_redact: '["${{ github.token }}","${{ secrets.BOT_GITHUB_TOKEN }}"]'
+      - env:
+          GH_TOKEN: ${{ secrets.BOT_GITHUB_TOKEN }}
+        run: |
+          collaborator_count="$(gh api /repos/${{ matrix.repository }}/collaborators --paginate | jq length)"
+          gh api /repos/${{ matrix.repository }}/rulesets --paginate | jq '.[].id' | while read -r id; do
+            gh api /repos/${{ matrix.repository }}/rulesets/"$id" > ruleset.json
+            if [ "$collaborator_count" -gt 1 ]; then
+              if [ "$(jq < ruleset.json '.rules[] | select(.type == "pull_request") | .parameters.required_approving_review_count')" = 0 ]; then
+                jq < ruleset.json '.rules |= map(if .type == "pull_request" then .parameters.required_approving_review_count = 1 else . end)' > tmp.json && cat < tmp.json > ruleset.json && rm tmp.json
+              fi
+              jq < ruleset.json '.rules |= map(if .type == "pull_request" then .parameters.require_last_push_approval = true else . end)' > tmp.json && cat < tmp.json > ruleset.json && rm tmp.json
+              jq < ruleset.json '.rules |= map(if .type == "pull_request" then .parameters.require_code_owner_review = true else . end)' > tmp.json && cat < tmp.json > ruleset.json && rm tmp.json
+            elif [ "$collaborator_count" = 1 ]; then
+              jq < ruleset.json '.rules |= map(if .type == "pull_request" then .parameters.required_approving_review_count = 0 else . end)' > tmp.json && cat < tmp.json > ruleset.json && rm tmp.json
+              jq < ruleset.json '.rules |= map(if .type == "pull_request" then .parameters.require_last_push_approval = false else . end)' > tmp.json && cat < tmp.json > ruleset.json && rm tmp.json
+              jq < ruleset.json '.rules |= map(if .type == "pull_request" then .parameters.require_code_owner_review = false else . end)' > tmp.json && cat < tmp.json > ruleset.json && rm tmp.json
+            fi
+            if [ "$(jq < ruleset.json '.rules[] | select(.type == "pull_request") | .parameters.required_approving_review_count')" -gt $((collaborator_count - 1)) ]; then
+              jq < ruleset.json '.rules |= map(if .type == "pull_request" then .parameters.required_approving_review_count = '$((collaborator_count - 1))' else . end)' > tmp.json && cat < tmp.json > ruleset.json && rm tmp.json
+            fi
+            jq < ruleset.json '{ "name": .name, "target": .target, "enforcement": .enforcement, "bypass_actors": .bypass_actors, "conditions": .conditions, "rules": .rules }' \
+              | curl -s --fail-with-body --header "Authorization: Bearer $GH_TOKEN" https://api.github.com/repos/${{ matrix.repository }}/rulesets/"$id" -d @- -X PATCH
+          done
+
   deploy-codeowners:
-    needs: list-repositories
+    needs: [ list-repositories, init-settings ]
     runs-on: ubuntu-slim
     strategy:
       matrix: 
@@ -104,6 +145,7 @@ jobs:
           merge-method: squash
     permissions:
       actions: read
+
   list-actions:
     runs-on: ubuntu-slim
     outputs:
@@ -122,7 +164,7 @@ jobs:
     permissions:
       actions: read
   deploy-action:
-    needs: [ list-repositories, list-actions ]
+    needs: [ list-repositories, list-actions, init-settings, deploy-gh-token, deploy-dt-token ]
     runs-on: ubuntu-slim
     strategy:
       matrix:
@@ -171,6 +213,7 @@ jobs:
           merge-method: squash
     permissions:
       actions: read
+
   deploy-gh-token:
     needs: list-repositories
     runs-on: ubuntu-latest
@@ -220,6 +263,7 @@ jobs:
           GH_TOKEN=${{ secrets.BOT_GITHUB_TOKEN }} gh secret set ACTIONS_GITHUB_TOKEN --repo ${{ matrix.repository }} < "${{ steps.create.outputs.token_path }}"
     permissions:
       actions: read
+
   deploy-dt-token:
     needs: list-repositories
     runs-on: ubuntu-slim
